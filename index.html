@@ -1,123 +1,54 @@
-<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script><style>
-    :root {
-        --case-color: #d8d8d8;
-        --display-bg: #1a1a1a;
-        --ep-orange: #ff5f00;
-        --button-gray: #444;
-    }
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KO-II DEBUG</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { background: #1a1a1a; color: #ff5f00; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: monospace; }
+        #screen { border: 4px solid #333; padding: 20px; margin-bottom: 20px; font-size: 20px; background: #000; width: 200px; text-align: center; }
+        .pad-grid { display: grid; grid-template-columns: repeat(2, 100px); gap: 20px; }
+        .pad { width: 100px; height: 100px; background: #444; border: none; border-radius: 10px; color: white; font-weight: bold; cursor: pointer; box-shadow: 0 5px 0 #222; }
+        .pad:active { transform: translateY(4px); box-shadow: 0 1px 0 #222; background: #ff5f00; }
+    </style>
+</head>
+<body>
 
-    body { 
-        background: #222; 
-        display: flex; 
-        justify-content: center; 
-        align-items: center; 
-        height: 100vh; 
-        margin: 0;
-        font-family: 'Courier New', Courier, monospace;
-    }
-
-    /* The Main Device Body */
-    .ep-133-case {
-        background: var(--case-color);
-        width: 340px;
-        padding: 30px;
-        border-radius: 20px;
-        box-shadow: 10px 10px 0px #000, inset -2px -2px 5px rgba(0,0,0,0.2);
-        border: 2px solid #999;
-    }
-
-    /* The Iconic Orange Display */
-    #display-container {
-        background: var(--display-bg);
-        height: 80px;
-        margin-bottom: 30px;
-        border-radius: 5px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        border: 6px solid #333;
-    }
-
-    #display-text {
-        color: var(--ep-orange);
-        font-size: 1.8rem;
-        letter-spacing: 4px;
-        text-shadow: 0 0 10px var(--ep-orange);
-        text-transform: uppercase;
-    }
-
-    /* 12-Pad Grid System */
-    .grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 15px;
-    }
-
-    .pad {
-        aspect-ratio: 1/1;
-        background: #f0f0f0;
-        border-radius: 50%; /* EP-133 uses circular buttons for some versions/functions */
-        border: 1px solid #ccc;
-        box-shadow: 0 6px 0 #bbb;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 900;
-        font-size: 0.8rem;
-        transition: 0.05s;
-    }
-
-    .pad:active {
-        transform: translateY(4px);
-        box-shadow: 0 2px 0 #999;
-        background: var(--ep-orange);
-        color: white;
-    }
-
-    /* Functional Buttons (REC/PLAY) */
-    .controls {
-        display: flex;
-        justify-content: space-between;
-        margin-top: 25px;
-    }
-
-    .btn-small {
-        background: var(--button-gray);
-        color: white;
-        border: none;
-        padding: 10px 15px;
-        border-radius: 4px;
-        font-size: 10px;
-        cursor: pointer;
-        text-transform: uppercase;
-    }
-
-    .rec-active { background: #ff0000; animation: blink 1s infinite; }
-    @keyframes blink { 50% { opacity: 0.5; } }
-</style>
-
-<div class="ep-133-case">
-    <div id="display-container">
-        <div id="display-text">001. BPM</div>
+    <div id="screen">TAP A PAD</div>
+    <div class="pad-grid">
+        <button class="pad" onclick="beep(261)">1</button>
+        <button class="pad" onclick="beep(329)">2</button>
+        <button class="pad" onclick="beep(392)">3</button>
+        <button class="pad" onclick="beep(523)">4</button>
     </div>
 
-    <div class="grid">
-        <div class="pad" onmousedown="play(0)">1</div>
-        <div class="pad" onmousedown="play(1)">2</div>
-        <div class="pad" onmousedown="play(2)">3</div>
-        <div class="pad" onmousedown="play(3)">4</div>
-        <div class="pad" onmousedown="play(0)">5</div>
-        <div class="pad" onmousedown="play(1)">6</div>
-        <div class="pad" onmousedown="play(2)">7</div>
-        <div class="pad" onmousedown="play(3)">8</div>
-        <div class="pad" onmousedown="play(0)">9</div>
-    </div>
+    <script>
+        // Create the audio brain
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-    <div class="controls">
-        <button class="btn-small" onclick="toggleTransport()">Play/Stop</button>
-        <button class="btn-small" id="recBtn" onclick="toggleRec()">Record</button>
-        <button class="btn-small" onmousedown="applyFX()" onmouseup="removeFX()">FX</button>
-    </div>
-</div>
+        function beep(frequency) {
+            // 1. WAKE UP THE BRAIN (Crucial for Mobile)
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            // 2. CREATE THE SOUND
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            oscillator.type = 'square'; // That "Retro" sound
+            oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+            
+            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.5);
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.5);
+
+            document.getElementById('screen').innerText = "FREQ: " + frequency;
+        }
+    </script>
+</body>
+</html>
