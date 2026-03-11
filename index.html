@@ -1,62 +1,138 @@
-// 1. Audio Engine (Synths)
-const kick = new Tone.MembraneSynth({ volume: 5 }).toDestination();
-const snare = new Tone.NoiseSynth({ volume: -5, envelope: { decay: 0.1 } }).toDestination();
-const hihat = new Tone.MetalSynth({ volume: -10, envelope: { decay: 0.05 } }).toDestination();
-const perc = new Tone.DuoSynth({ volume: -10 }).toDestination();
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        :root { --ep-orange: #ff5f00; --case: #d1d1d1; --lcd-bg: #000; }
+        body { background: #1a1a1a; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: 'Courier New', monospace; overflow: hidden; -webkit-user-select: none; }
+        
+        /* The Hardware Chassis */
+        .ep-case { background: var(--case); width: 320px; padding: 20px; border-radius: 20px; box-shadow: 10px 10px 0 #000; border: 2px solid #999; }
+        
+        /* The Screen */
+        .lcd { background: var(--lcd-bg); height: 70px; margin-bottom: 15px; border-radius: 5px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--ep-orange); border: 4px solid #333; }
+        #display { font-size: 1.4rem; text-shadow: 0 0 10px var(--ep-orange); }
+        #sub-display { font-size: 0.7rem; margin-top: 5px; opacity: 0.8; }
 
-// 2. Sequencer State
-let isRecording = false;
-let loopStarted = false;
-const sequence = new Tone.Part((time, event) => {
-    hit(event.type, true, time);
-}, []).start(0);
+        /* Buttons */
+        .controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 15px; }
+        .btn-sm { padding: 10px 5px; border: none; border-radius: 4px; background: #444; color: #fff; font-size: 10px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+        .btn-active { background: #2ea44f; }
+        .rec-active { background: #ff0000; animation: pulse 1s infinite; }
+        @keyframes pulse { 50% { opacity: 0.6; } }
 
-sequence.loop = true;
-sequence.loopEnd = "1n"; // 1 bar loop
+        /* The Pads */
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .pad { aspect-ratio: 1/1; background: #eee; border-radius: 50%; border: none; box-shadow: 0 5px 0 #bbb; cursor: pointer; font-weight: bold; font-size: 1.2rem; -webkit-tap-highlight-color: transparent; }
+        .pad:active { transform: translateY(3px); box-shadow: 0 1px 0 #999; background: var(--ep-orange); color: white; }
 
-async function boot() {
-    await Tone.start();
-    Tone.Transport.bpm.value = 120;
-    document.getElementById('display').innerText = "120.0 BPM";
-    document.getElementById('pwrBtn').style.background = "#2ea44f";
-    document.getElementById('pwrBtn').innerText = "SYSTEM ONLINE";
-}
+        .pwr-bar { width: 100%; height: 8px; background: #333; margin-bottom: 10px; border-radius: 10px; cursor: pointer; }
+    </style>
+</head>
+<body>
 
-function hit(type, isPlayback = false, time = Tone.now()) {
-    if (Tone.context.state !== 'running') return;
+<div class="ep-case">
+    <div class="pwr-bar" id="pwrBtn" onclick="boot()"></div>
+    
+    <div class="lcd">
+        <div id="display">K.O. II</div>
+        <div id="sub-display">PUSH POWER BAR</div>
+    </div>
 
-    // Play the sound
-    if (type === 'kick') kick.triggerAttackRelease("C1", "8n", time);
-    if (type === 'snare') snare.triggerAttackRelease("8n", time);
-    if (type === 'hihat') hihat.triggerAttackRelease("32n", time);
-    if (type === 'perc') perc.triggerAttackRelease("G4", "32n", time);
+    <div class="controls">
+        <button class="btn-sm" id="playBtn" onclick="togglePlay()">Play</button>
+        <button class="btn-sm" id="recBtn" onclick="toggleRec()">Rec</button>
+        <button class="btn-sm" onclick="clearSequence()">Erase</button>
+    </div>
 
-    // If we are recording and this is a manual tap, save it
-    if (isRecording && !isPlayback) {
-        const playhead = Tone.Transport.seconds % Tone.Time("1n").toSeconds();
-        sequence.add(playhead, { type: type });
+    <div class="grid">
+        <button class="pad" onmousedown="hit('kick')">1</button>
+        <button class="pad" onmousedown="hit('snare')">2</button>
+        <button class="pad" onmousedown="hit('hihat')">3</button>
+        <button class="pad" onmousedown="hit('perc')">4</button>
+        <button class="pad" onmousedown="hit('kick')">5</button>
+        <button class="pad" onmousedown="hit('snare')">6</button>
+        <button class="pad" onmousedown="hit('hihat')">7</button>
+        <button class="pad" onmousedown="hit('perc')">8</button>
+        <button class="pad" onmousedown="hit('kick')">9</button>
+    </div>
+</div>
+
+<script>
+    // Audio Engine
+    const kick = new Tone.MembraneSynth({ volume: 5 }).toDestination();
+    const snare = new Tone.NoiseSynth({ volume: -5, envelope: { decay: 0.1 } }).toDestination();
+    const hihat = new Tone.MetalSynth({ volume: -12, envelope: { decay: 0.05 } }).toDestination();
+    const perc = new Tone.DuoSynth({ volume: -10 }).toDestination();
+
+    let isRecording = false;
+    let isPlaying = false;
+    
+    // This part handles the looping memory
+    const sequence = new Tone.Part((time, event) => {
+        hit(event.type, true, time);
+    }, []).start(0);
+    sequence.loop = true;
+    sequence.loopEnd = "1n"; // 1 bar loop
+
+    async function boot() {
+        await Tone.start();
+        Tone.Transport.bpm.value = 120;
+        document.getElementById('display').innerText = "120 BPM";
+        document.getElementById('sub-display').innerText = "SYSTEM ONLINE";
+        document.getElementById('pwrBtn').style.background = "#2ea44f";
     }
 
-    if (!isPlayback) {
-        document.getElementById('display').innerText = type.toUpperCase();
-        if (navigator.vibrate) navigator.vibrate(15);
-    }
-}
+    function hit(type, isPlayback = false, time = Tone.now()) {
+        if (Tone.context.state !== 'running') return;
+        
+        if (type === 'kick') kick.triggerAttackRelease("C1", "8n", time);
+        if (type === 'snare') snare.triggerAttackRelease("8n", time);
+        if (type === 'hihat') hihat.triggerAttackRelease("32n", time);
+        if (type === 'perc') perc.triggerAttackRelease("G4", "32n", time);
 
-function togglePlay() {
-    if (!loopStarted) {
-        Tone.Transport.start();
-        loopStarted = true;
-        document.getElementById('display').innerText = "PLAYING";
-    } else {
-        Tone.Transport.stop();
-        loopStarted = false;
-        document.getElementById('display').innerText = "STOPPED";
-    }
-}
+        if (isRecording && !isPlayback) {
+            const now = Tone.Transport.seconds % Tone.Time("1n").toSeconds();
+            sequence.add(now, { type: type });
+        }
 
-function toggleRec() {
-    isRecording = !isRecording;
-    document.getElementById('display').innerText = isRecording ? "RECORDING" : "REC OFF";
-    document.getElementById('display').style.color = isRecording ? "#ff0000" : "#ff5f00";
-}
+        if (!isPlayback) {
+            document.getElementById('display').innerText = type.toUpperCase();
+            if (navigator.vibrate) navigator.vibrate(10);
+        }
+    }
+
+    function togglePlay() {
+        if (isPlaying) {
+            Tone.Transport.stop();
+            document.getElementById('playBtn').classList.remove('btn-active');
+            document.getElementById('display').innerText = "STOPPED";
+        } else {
+            Tone.Transport.start();
+            document.getElementById('playBtn').classList.add('btn-active');
+            document.getElementById('display').innerText = "PLAYING";
+        }
+        isPlaying = !isPlaying;
+    }
+
+    function toggleRec() {
+        isRecording = !isRecording;
+        const rb = document.getElementById('recBtn');
+        if (isRecording) {
+            rb.classList.add('rec-active');
+            document.getElementById('display').innerText = "RECORD";
+        } else {
+            rb.classList.remove('rec-active');
+            document.getElementById('display').innerText = "120 BPM";
+        }
+    }
+
+    function clearSequence() {
+        sequence.clear();
+        document.getElementById('display').innerText = "ERASED";
+        setTimeout(() => { document.getElementById('display').innerText = "120 BPM"; }, 1000);
+    }
+</script>
+</body>
+</html>
