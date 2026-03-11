@@ -1,62 +1,62 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
-    <style>
-        :root { --ep-orange: #ff5f00; --case: #d1d1d1; }
-        body { background: #222; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: monospace; overflow: hidden; -webkit-touch-callout: none; -webkit-user-select: none; }
-        .ep-case { background: var(--case); width: 300px; padding: 20px; border-radius: 15px; box-shadow: 8px 8px 0 #000; border: 2px solid #999; }
-        .lcd { background: #000; height: 60px; margin-bottom: 15px; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: var(--ep-orange); font-size: 1.2rem; border: 3px solid #333; }
-        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        .pad { aspect-ratio: 1/1; background: #eee; border-radius: 50%; border: none; box-shadow: 0 4px 0 #bbb; cursor: pointer; font-weight: bold; font-size: 1.1rem; -webkit-tap-highlight-color: transparent; }
-        .pad:active { transform: translateY(2px); box-shadow: 0 1px 0 #999; background: var(--ep-orange); color: white; }
-        .pwr { width: 100%; padding: 10px; margin-bottom: 10px; background: #444; color: white; border: none; border-radius: 5px; font-size: 10px; }
-    </style>
-</head>
-<body>
+// 1. Audio Engine (Synths)
+const kick = new Tone.MembraneSynth({ volume: 5 }).toDestination();
+const snare = new Tone.NoiseSynth({ volume: -5, envelope: { decay: 0.1 } }).toDestination();
+const hihat = new Tone.MetalSynth({ volume: -10, envelope: { decay: 0.05 } }).toDestination();
+const perc = new Tone.DuoSynth({ volume: -10 }).toDestination();
 
-<div class="ep-case">
-    <button class="pwr" id="pwrBtn" onclick="boot()">○ PUSH TO BOOT SYSTEM</button>
-    <div class="lcd" id="display">OFFLINE</div>
-    <div class="grid">
-        <button class="pad" onmousedown="hit('kick')">1</button>
-        <button class="pad" onmousedown="hit('snare')">2</button>
-        <button class="pad" onmousedown="hit('hihat')">3</button>
-        <button class="pad" onmousedown="hit('perc')">4</button>
-        <button class="pad" onmousedown="hit('kick')">5</button>
-        <button class="pad" onmousedown="hit('snare')">6</button>
-        <button class="pad" onmousedown="hit('hihat')">7</button>
-        <button class="pad" onmousedown="hit('perc')">8</button>
-        <button class="pad" onmousedown="hit('kick')">9</button>
-    </div>
-</div>
+// 2. Sequencer State
+let isRecording = false;
+let loopStarted = false;
+const sequence = new Tone.Part((time, event) => {
+    hit(event.type, true, time);
+}, []).start(0);
 
-<script>
-    // 1. Create Internal Instruments (No Downloads Needed)
-    const kick = new Tone.MembraneSynth({ volume: 5 }).toDestination();
-    const snare = new Tone.NoiseSynth({ volume: -5, envelope: { decay: 0.1 } }).toDestination();
-    const hihat = new Tone.MetalSynth({ volume: -10, envelope: { decay: 0.05 } }).toDestination();
-    const perc = new Tone.DuoSynth({ volume: -10 }).toDestination();
+sequence.loop = true;
+sequence.loopEnd = "1n"; // 1 bar loop
 
-    async function boot() {
-        await Tone.start();
-        document.getElementById('display').innerText = "120.0 BPM";
-        document.getElementById('pwrBtn').style.background = "#2ea44f";
-        document.getElementById('pwrBtn').innerText = "SYSTEM ONLINE";
+async function boot() {
+    await Tone.start();
+    Tone.Transport.bpm.value = 120;
+    document.getElementById('display').innerText = "120.0 BPM";
+    document.getElementById('pwrBtn').style.background = "#2ea44f";
+    document.getElementById('pwrBtn').innerText = "SYSTEM ONLINE";
+}
+
+function hit(type, isPlayback = false, time = Tone.now()) {
+    if (Tone.context.state !== 'running') return;
+
+    // Play the sound
+    if (type === 'kick') kick.triggerAttackRelease("C1", "8n", time);
+    if (type === 'snare') snare.triggerAttackRelease("8n", time);
+    if (type === 'hihat') hihat.triggerAttackRelease("32n", time);
+    if (type === 'perc') perc.triggerAttackRelease("G4", "32n", time);
+
+    // If we are recording and this is a manual tap, save it
+    if (isRecording && !isPlayback) {
+        const playhead = Tone.Transport.seconds % Tone.Time("1n").toSeconds();
+        sequence.add(playhead, { type: type });
     }
 
-    function hit(type) {
-        if (Tone.context.state !== 'running') return;
-        
-        if (type === 'kick') kick.triggerAttackRelease("C1", "8n");
-        if (type === 'snare') snare.triggerAttackRelease("8n");
-        if (type === 'hihat') hihat.triggerAttackRelease("32n");
-        if (type === 'perc') perc.triggerAttackRelease("G4", "32n");
-
+    if (!isPlayback) {
         document.getElementById('display').innerText = type.toUpperCase();
         if (navigator.vibrate) navigator.vibrate(15);
     }
-</script>
-</body>
-</html>
+}
+
+function togglePlay() {
+    if (!loopStarted) {
+        Tone.Transport.start();
+        loopStarted = true;
+        document.getElementById('display').innerText = "PLAYING";
+    } else {
+        Tone.Transport.stop();
+        loopStarted = false;
+        document.getElementById('display').innerText = "STOPPED";
+    }
+}
+
+function toggleRec() {
+    isRecording = !isRecording;
+    document.getElementById('display').innerText = isRecording ? "RECORDING" : "REC OFF";
+    document.getElementById('display').style.color = isRecording ? "#ff0000" : "#ff5f00";
+}
