@@ -4,73 +4,59 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <style>
-        :root { --ep-orange: #ff5f00; --case-gray: #d1d1d1; }
-        body { background: #222; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: 'Courier New', monospace; overflow: hidden; }
-        .ep-case { background: var(--case-gray); width: 320px; padding: 25px; border-radius: 20px; box-shadow: 10px 10px 0 #000; border: 2px solid #999; }
-        .lcd { background: #111; height: 70px; margin-bottom: 20px; border-radius: 5px; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 4px solid #333; color: var(--ep-orange); text-shadow: 0 0 8px var(--ep-orange); }
-        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-        .pad { aspect-ratio: 1/1; background: #eee; border-radius: 50%; border: 1px solid #ccc; box-shadow: 0 5px 0 #bbb; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; }
-        .pad:active { transform: translateY(3px); box-shadow: 0 2px 0 #999; background: var(--ep-orange); color: white; }
-        .power-btn { width: 100%; padding: 10px; margin-bottom: 15px; background: #444; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 12px; }
+        :root { --ep-orange: #ff5f00; --case: #d1d1d1; }
+        body { background: #222; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: monospace; overflow: hidden; -webkit-touch-callout: none; -webkit-user-select: none; }
+        .ep-case { background: var(--case); width: 300px; padding: 20px; border-radius: 15px; box-shadow: 8px 8px 0 #000; border: 2px solid #999; }
+        .lcd { background: #000; height: 60px; margin-bottom: 15px; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: var(--ep-orange); font-size: 1.2rem; border: 3px solid #333; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .pad { aspect-ratio: 1/1; background: #eee; border-radius: 50%; border: none; box-shadow: 0 4px 0 #bbb; cursor: pointer; font-weight: bold; font-size: 1.1rem; -webkit-tap-highlight-color: transparent; }
+        .pad:active { transform: translateY(2px); box-shadow: 0 1px 0 #999; background: var(--ep-orange); color: white; }
+        .pwr { width: 100%; padding: 10px; margin-bottom: 10px; background: #444; color: white; border: none; border-radius: 5px; font-size: 10px; }
     </style>
 </head>
 <body>
 
 <div class="ep-case">
-    <button class="power-btn" onclick="startEngine()">● POWER / SYSTEM START</button>
-    
-    <div class="lcd">
-        <div id="display">EP-133 READY</div>
-    </div>
-
+    <button class="pwr" id="pwrBtn" onclick="boot()">○ PUSH TO BOOT SYSTEM</button>
+    <div class="lcd" id="display">OFFLINE</div>
     <div class="grid">
-        <div class="pad" onmousedown="hit(0)">1</div>
-        <div class="pad" onmousedown="hit(1)">2</div>
-        <div class="pad" onmousedown="hit(2)">3</div>
-        <div class="pad" onmousedown="hit(3)">4</div>
-        <div class="pad" onmousedown="hit(4)">5</div>
-        <div class="pad" onmousedown="hit(5)">6</div>
-        <div class="pad" onmousedown="hit(6)">7</div>
-        <div class="pad" onmousedown="hit(7)">8</div>
-        <div class="pad" onmousedown="hit(8)">9</div>
+        <button class="pad" onmousedown="hit('kick')">1</button>
+        <button class="pad" onmousedown="hit('snare')">2</button>
+        <button class="pad" onmousedown="hit('hihat')">3</button>
+        <button class="pad" onmousedown="hit('perc')">4</button>
+        <button class="pad" onmousedown="hit('kick')">5</button>
+        <button class="pad" onmousedown="hit('snare')">6</button>
+        <button class="pad" onmousedown="hit('hihat')">7</button>
+        <button class="pad" onmousedown="hit('perc')">8</button>
+        <button class="pad" onmousedown="hit('kick')">9</button>
     </div>
 </div>
 
 <script>
-    // 1. Initialize Sampler (Using high-quality web drums)
-    const sampler = new Tone.Sampler({
-        urls: {
-            "C1": "https://tonejs.github.io/audio/drum-samples/CR78/kick.mp3",
-            "D1": "https://tonejs.github.io/audio/drum-samples/CR78/snare.mp3",
-            "E1": "https://tonejs.github.io/audio/drum-samples/CR78/hat.mp3",
-            "F1": "https://tonejs.github.io/audio/drum-samples/CR78/rim.mp3",
-            "G1": "https://tonejs.github.io/audio/drum-samples/CR78/tom1.mp3",
-            "A1": "https://tonejs.github.io/audio/drum-samples/CR78/tom2.mp3",
-            "B1": "https://tonejs.github.io/audio/drum-samples/CR78/claps.mp3",
-            "C2": "https://tonejs.github.io/audio/drum-samples/CR78/cowbell.mp3",
-            "D2": "https://tonejs.github.io/audio/drum-samples/CR78/maracas.mp3"
-        }
-    }).toDestination();
+    // 1. Create Internal Instruments (No Downloads Needed)
+    const kick = new Tone.MembraneSynth({ volume: 5 }).toDestination();
+    const snare = new Tone.NoiseSynth({ volume: -5, envelope: { decay: 0.1 } }).toDestination();
+    const hihat = new Tone.MetalSynth({ volume: -10, envelope: { decay: 0.05 } }).toDestination();
+    const perc = new Tone.DuoSynth({ volume: -10 }).toDestination();
 
-    const notes = ["C1", "D1", "E1", "F1", "G1", "A1", "B1", "C2", "D2"];
-
-    async function startEngine() {
+    async function boot() {
         await Tone.start();
-        document.getElementById('display').innerText = "001. BPM";
-        document.querySelector('.power-btn').style.background = "#2ea44f";
-        document.querySelector('.power-btn').innerText = "SYSTEM ONLINE";
+        document.getElementById('display').innerText = "120.0 BPM";
+        document.getElementById('pwrBtn').style.background = "#2ea44f";
+        document.getElementById('pwrBtn').innerText = "SYSTEM ONLINE";
     }
 
-    function hit(i) {
-        if (Tone.context.state !== 'running') {
-            document.getElementById('display').innerText = "TAP POWER!";
-            return;
-        }
-        sampler.triggerAttack(notes[i]);
-        document.getElementById('display').innerText = "SAMP 00" + (i + 1);
-        if (navigator.vibrate) navigator.vibrate(10);
+    function hit(type) {
+        if (Tone.context.state !== 'running') return;
+        
+        if (type === 'kick') kick.triggerAttackRelease("C1", "8n");
+        if (type === 'snare') snare.triggerAttackRelease("8n");
+        if (type === 'hihat') hihat.triggerAttackRelease("32n");
+        if (type === 'perc') perc.triggerAttackRelease("G4", "32n");
+
+        document.getElementById('display').innerText = type.toUpperCase();
+        if (navigator.vibrate) navigator.vibrate(15);
     }
 </script>
-
 </body>
 </html>
