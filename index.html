@@ -4,175 +4,133 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <style>
-        :root { 
-            --ep-orange: #ff5f00; 
-            --case: #e0e0e0; 
-            --lcd-bg: #121212;
-            --shadow: #b8b8b8;
-        }
+        :root { --ep-orange: #ff5f00; --case: #d8d8d8; --lcd: #111; }
+        body { background: #1a1a1a; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: 'Courier New', Courier, monospace; overflow: hidden; }
+
+        .ep-case { background: var(--case); width: 340px; padding: 25px; border-radius: 15px; box-shadow: 12px 12px 0 #000; position: relative; border: 1px solid #fff; }
         
-        body { background: #222; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: sans-serif; overflow: hidden; }
+        /* LCD Screen */
+        .lcd { background: var(--lcd); height: 100px; margin-bottom: 20px; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--ep-orange); border: 6px solid #222; box-shadow: inset 0 0 15px #000; }
+        #bpm-display { font-size: 2.5rem; font-weight: bold; }
+        #bank-indicator { font-size: 0.8rem; letter-spacing: 2px; }
 
-        /* The Chassis */
-        .ep-case { 
-            background: var(--case); 
-            width: 320px; 
-            padding: 30px 20px; 
-            border-radius: 12px; 
-            box-shadow: 12px 12px 0 #000; 
-            border: 1px solid #fff;
-            position: relative;
-        }
+        /* Bank and Control Buttons */
+        .top-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-bottom: 10px; }
+        .bank-btn { background: #444; color: white; border: none; padding: 8px; font-size: 10px; border-radius: 3px; cursor: pointer; box-shadow: 0 3px 0 #000; }
+        .bank-btn.active { background: var(--ep-orange); }
 
-        /* Speaker Grill Detail */
-        .grill { position: absolute; top: 15px; right: 25px; display: flex; gap: 3px; }
-        .grill-line { width: 2px; height: 15px; background: #bbb; }
-
-        /* The Segmented LCD */
-        .lcd { 
-            background: var(--lcd-bg); 
-            height: 90px; 
-            margin: 10px 0 25px 0; 
-            border-radius: 4px; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            color: var(--ep-orange); 
-            border: 5px solid #222;
-            box-shadow: inset 0 0 10px #000;
-        }
-        #display { font-family: 'Courier New', monospace; font-size: 2rem; font-weight: bold; letter-spacing: 2px; }
-        #sub-display { font-size: 0.6rem; text-transform: uppercase; margin-top: 5px; letter-spacing: 1px; }
-
-        /* Small Performance Buttons */
-        .controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 25px; }
-        .btn-sm { 
-            padding: 8px; border: none; border-radius: 3px; background: #333; color: #fff; 
-            font-size: 9px; font-weight: bold; cursor: pointer; text-transform: uppercase;
-            box-shadow: 0 3px 0 #000;
-        }
-        .btn-sm:active { transform: translateY(2px); box-shadow: 0 1px 0 #000; }
-        .btn-active { background: #2ea44f !important; }
+        .controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+        .btn-main { background: #333; color: white; border: none; padding: 12px; font-size: 10px; font-weight: bold; text-transform: uppercase; border-radius: 4px; box-shadow: 0 4px 0 #000; }
+        .btn-main:active { transform: translateY(2px); box-shadow: 0 2px 0 #000; }
         .rec-active { background: #d00 !important; }
 
-        /* The Iconic 12-Pad Grid */
-        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
-        .pad { 
-            aspect-ratio: 1/1; 
-            background: #fff; 
-            border-radius: 50%; 
-            border: 1px solid #ccc; 
-            box-shadow: 0 6px 0 var(--shadow); 
-            cursor: pointer; 
-            font-weight: bold; 
-            font-size: 1.2rem; 
-            color: #333;
-            transition: 0.05s;
-        }
-        .pad:active { 
-            transform: translateY(4px); 
-            box-shadow: 0 2px 0 var(--shadow); 
-            background: var(--ep-orange); 
-            color: #fff; 
-        }
+        /* The Pads */
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+        .pad { aspect-ratio: 1/1; background: #fff; border: 1px solid #ccc; border-radius: 50%; font-size: 1.5rem; font-weight: bold; color: #333; box-shadow: 0 6px 0 #bbb; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+        .pad:active { transform: translateY(4px); box-shadow: 0 2px 0 #bbb; background: var(--ep-orange); color: white; }
 
-        .label { font-size: 10px; color: #888; margin-bottom: 5px; font-weight: bold; }
+        .tempo-input { background: none; border: none; color: var(--ep-orange); font-family: inherit; font-size: 2.5rem; width: 100px; text-align: center; font-weight: bold; outline: none; }
     </style>
 </head>
 <body>
 
 <div class="ep-case">
-    <div class="grill">
-        <div class="grill-line"></div><div class="grill-line"></div><div class="grill-line"></div>
+    <div class="top-row">
+        <button class="bank-btn active" onclick="setBank('A', this)">BANK A</button>
+        <button class="bank-btn" onclick="setBank('B', this)">BANK B</button>
+        <button class="bank-btn" onclick="setBank('C', this)">BANK C</button>
+        <button class="bank-btn" onclick="setBank('D', this)">BANK D</button>
     </div>
 
-    <div class="label">EP-133 // SAMPLE TOOL</div>
-    
-    <div class="lcd" onclick="boot()">
-        <div id="display">000</div>
-        <div id="sub-display">TOUCH TO BOOT</div>
+    <div class="lcd">
+        <div id="bank-indicator">BANK A // SAMPLE</div>
+        <input type="number" id="bpm-display" class="tempo-input" value="120" onchange="updateBPM(this.value)">
+        <div style="font-size: 8px;">TAP TO CHANGE BPM</div>
     </div>
 
     <div class="controls">
-        <button class="btn-sm" id="playBtn" onclick="togglePlay()">Play</button>
-        <button class="btn-sm" id="recBtn" onclick="toggleRec()">Rec</button>
-        <button class="btn-sm" onclick="clearSequence()">Erase</button>
+        <button class="btn-main" onclick="boot()">Power</button>
+        <button class="btn-main" id="playBtn" onclick="togglePlay()">Play</button>
+        <button class="btn-main" id="recBtn" onclick="toggleRec()">Rec</button>
     </div>
 
     <div class="grid">
-        <button class="pad" onmousedown="hit('kick')">1</button>
-        <button class="pad" onmousedown="hit('snare')">2</button>
-        <button class="pad" onmousedown="hit('hihat')">3</button>
-        <button class="pad" onmousedown="hit('perc')">4</button>
-        <button class="pad" onmousedown="hit('kick')">5</button>
-        <button class="pad" onmousedown="hit('snare')">6</button>
-        <button class="pad" onmousedown="hit('hihat')">7</button>
-        <button class="pad" onmousedown="hit('perc')">8</button>
-        <button class="pad" onmousedown="hit('kick')">9</button>
+        <button class="pad" onmousedown="hit(1)">1</button>
+        <button class="pad" onmousedown="hit(2)">2</button>
+        <button class="pad" onmousedown="hit(3)">3</button>
+        <button class="pad" onmousedown="hit(4)">4</button>
+        <button class="pad" onmousedown="hit(5)">5</button>
+        <button class="pad" onmousedown="hit(6)">6</button>
+        <button class="pad" onmousedown="hit(7)">7</button>
+        <button class="pad" onmousedown="hit(8)">8</button>
+        <button class="pad" onmousedown="hit(9)">9</button>
     </div>
 </div>
 
 <script>
-    const kick = new Tone.MembraneSynth({ volume: 5 }).toDestination();
-    const snare = new Tone.NoiseSynth({ volume: -5, envelope: { decay: 0.1 } }).toDestination();
-    const hihat = new Tone.MetalSynth({ volume: -12, envelope: { decay: 0.05 } }).toDestination();
-    const perc = new Tone.DuoSynth({ volume: -10 }).toDestination();
+    // Four different sound engines for Banks A, B, C, D
+    const engines = {
+        A: new Tone.MembraneSynth({envelope: {pitchDecay: 0.05}}).toDestination(), // Kicks
+        B: new Tone.NoiseSynth({envelope: {decay: 0.1}}).toDestination(),          // Snares
+        C: new Tone.MetalSynth({envelope: {decay: 0.05}}).toDestination(),         // Hats
+        D: new Tone.MonoSynth({oscillator: {type: "square"}}).toDestination()      // Bass
+    };
 
+    let currentBank = 'A';
     let isRecording = false;
     let isPlaying = false;
     
     const sequence = new Tone.Part((time, event) => {
-        hit(event.type, true, time);
+        playTrigger(event.bank, event.note, time);
     }, []).start(0);
     sequence.loop = true;
     sequence.loopEnd = "1n";
 
     async function boot() {
         await Tone.start();
-        Tone.Transport.bpm.value = 120;
-        document.getElementById('display').innerText = "120";
-        document.getElementById('sub-display').innerText = "SYSTEM ONLINE";
+        document.getElementById('bank-indicator').innerText = "SYSTEM ONLINE";
     }
 
-    function hit(type, isPlayback = false, time = Tone.now()) {
+    function setBank(bank, btn) {
+        currentBank = bank;
+        document.querySelectorAll('.bank-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('bank-indicator').innerText = "BANK " + bank + " // ACTIVE";
+    }
+
+    function updateBPM(val) {
+        Tone.Transport.bpm.value = val;
+    }
+
+    function hit(num) {
         if (Tone.context.state !== 'running') return;
         
-        if (type === 'kick') kick.triggerAttackRelease("C1", "8n", time);
-        if (type === 'snare') snare.triggerAttackRelease("8n", time);
-        if (type === 'hihat') hihat.triggerAttackRelease("32n", time);
-        if (type === 'perc') perc.triggerAttackRelease("G4", "32n", time);
+        playTrigger(currentBank, num);
 
-        if (isRecording && !isPlayback) {
+        if (isRecording) {
             const now = Tone.Transport.seconds % Tone.Time("1n").toSeconds();
-            sequence.add(now, { type: type });
+            sequence.add(now, { bank: currentBank, note: num });
         }
+        if (navigator.vibrate) navigator.vibrate(10);
+    }
 
-        if (!isPlayback) {
-            document.getElementById('display').innerText = Math.floor(Math.random()*900 + 100);
-            if (navigator.vibrate) navigator.vibrate(10);
-        }
+    function playTrigger(bank, num, time = Tone.now()) {
+        const freq = 50 + (num * 20); // Scale sound based on pad number
+        if (bank === 'A') engines.A.triggerAttackRelease(freq, "8n", time);
+        if (bank === 'B') engines.B.triggerAttackRelease("8n", time);
+        if (bank === 'C') engines.C.triggerAttackRelease("32n", time);
+        if (bank === 'D') engines.D.triggerAttackRelease(freq / 2, "16n", time);
     }
 
     function togglePlay() {
-        if (isPlaying) {
-            Tone.Transport.stop();
-            document.getElementById('playBtn').classList.remove('btn-active');
-        } else {
-            Tone.Transport.start();
-            document.getElementById('playBtn').classList.add('btn-active');
-        }
+        isPlaying ? Tone.Transport.stop() : Tone.Transport.start();
         isPlaying = !isPlaying;
+        document.getElementById('playBtn').style.color = isPlaying ? "#0f0" : "#fff";
     }
 
     function toggleRec() {
         isRecording = !isRecording;
         document.getElementById('recBtn').classList.toggle('rec-active');
-    }
-
-    function clearSequence() {
-        sequence.clear();
-        document.getElementById('display').innerText = "CLR";
     }
 </script>
 </body>
