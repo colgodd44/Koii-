@@ -4,40 +4,94 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <style>
-        :root { --ep-orange: #ff5f00; --case: #d1d1d1; --lcd-bg: #000; }
-        body { background: #1a1a1a; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: 'Courier New', monospace; overflow: hidden; -webkit-user-select: none; }
+        :root { 
+            --ep-orange: #ff5f00; 
+            --case: #e0e0e0; 
+            --lcd-bg: #121212;
+            --shadow: #b8b8b8;
+        }
         
-        /* The Hardware Chassis */
-        .ep-case { background: var(--case); width: 320px; padding: 20px; border-radius: 20px; box-shadow: 10px 10px 0 #000; border: 2px solid #999; }
-        
-        /* The Screen */
-        .lcd { background: var(--lcd-bg); height: 70px; margin-bottom: 15px; border-radius: 5px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--ep-orange); border: 4px solid #333; }
-        #display { font-size: 1.4rem; text-shadow: 0 0 10px var(--ep-orange); }
-        #sub-display { font-size: 0.7rem; margin-top: 5px; opacity: 0.8; }
+        body { background: #222; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: sans-serif; overflow: hidden; }
 
-        /* Buttons */
-        .controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 15px; }
-        .btn-sm { padding: 10px 5px; border: none; border-radius: 4px; background: #444; color: #fff; font-size: 10px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
-        .btn-active { background: #2ea44f; }
-        .rec-active { background: #ff0000; animation: pulse 1s infinite; }
-        @keyframes pulse { 50% { opacity: 0.6; } }
+        /* The Chassis */
+        .ep-case { 
+            background: var(--case); 
+            width: 320px; 
+            padding: 30px 20px; 
+            border-radius: 12px; 
+            box-shadow: 12px 12px 0 #000; 
+            border: 1px solid #fff;
+            position: relative;
+        }
 
-        /* The Pads */
-        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-        .pad { aspect-ratio: 1/1; background: #eee; border-radius: 50%; border: none; box-shadow: 0 5px 0 #bbb; cursor: pointer; font-weight: bold; font-size: 1.2rem; -webkit-tap-highlight-color: transparent; }
-        .pad:active { transform: translateY(3px); box-shadow: 0 1px 0 #999; background: var(--ep-orange); color: white; }
+        /* Speaker Grill Detail */
+        .grill { position: absolute; top: 15px; right: 25px; display: flex; gap: 3px; }
+        .grill-line { width: 2px; height: 15px; background: #bbb; }
 
-        .pwr-bar { width: 100%; height: 8px; background: #333; margin-bottom: 10px; border-radius: 10px; cursor: pointer; }
+        /* The Segmented LCD */
+        .lcd { 
+            background: var(--lcd-bg); 
+            height: 90px; 
+            margin: 10px 0 25px 0; 
+            border-radius: 4px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            color: var(--ep-orange); 
+            border: 5px solid #222;
+            box-shadow: inset 0 0 10px #000;
+        }
+        #display { font-family: 'Courier New', monospace; font-size: 2rem; font-weight: bold; letter-spacing: 2px; }
+        #sub-display { font-size: 0.6rem; text-transform: uppercase; margin-top: 5px; letter-spacing: 1px; }
+
+        /* Small Performance Buttons */
+        .controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 25px; }
+        .btn-sm { 
+            padding: 8px; border: none; border-radius: 3px; background: #333; color: #fff; 
+            font-size: 9px; font-weight: bold; cursor: pointer; text-transform: uppercase;
+            box-shadow: 0 3px 0 #000;
+        }
+        .btn-sm:active { transform: translateY(2px); box-shadow: 0 1px 0 #000; }
+        .btn-active { background: #2ea44f !important; }
+        .rec-active { background: #d00 !important; }
+
+        /* The Iconic 12-Pad Grid */
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+        .pad { 
+            aspect-ratio: 1/1; 
+            background: #fff; 
+            border-radius: 50%; 
+            border: 1px solid #ccc; 
+            box-shadow: 0 6px 0 var(--shadow); 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 1.2rem; 
+            color: #333;
+            transition: 0.05s;
+        }
+        .pad:active { 
+            transform: translateY(4px); 
+            box-shadow: 0 2px 0 var(--shadow); 
+            background: var(--ep-orange); 
+            color: #fff; 
+        }
+
+        .label { font-size: 10px; color: #888; margin-bottom: 5px; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="ep-case">
-    <div class="pwr-bar" id="pwrBtn" onclick="boot()"></div>
+    <div class="grill">
+        <div class="grill-line"></div><div class="grill-line"></div><div class="grill-line"></div>
+    </div>
+
+    <div class="label">EP-133 // SAMPLE TOOL</div>
     
-    <div class="lcd">
-        <div id="display">K.O. II</div>
-        <div id="sub-display">PUSH POWER BAR</div>
+    <div class="lcd" onclick="boot()">
+        <div id="display">000</div>
+        <div id="sub-display">TOUCH TO BOOT</div>
     </div>
 
     <div class="controls">
@@ -60,7 +114,6 @@
 </div>
 
 <script>
-    // Audio Engine
     const kick = new Tone.MembraneSynth({ volume: 5 }).toDestination();
     const snare = new Tone.NoiseSynth({ volume: -5, envelope: { decay: 0.1 } }).toDestination();
     const hihat = new Tone.MetalSynth({ volume: -12, envelope: { decay: 0.05 } }).toDestination();
@@ -69,19 +122,17 @@
     let isRecording = false;
     let isPlaying = false;
     
-    // This part handles the looping memory
     const sequence = new Tone.Part((time, event) => {
         hit(event.type, true, time);
     }, []).start(0);
     sequence.loop = true;
-    sequence.loopEnd = "1n"; // 1 bar loop
+    sequence.loopEnd = "1n";
 
     async function boot() {
         await Tone.start();
         Tone.Transport.bpm.value = 120;
-        document.getElementById('display').innerText = "120 BPM";
+        document.getElementById('display').innerText = "120";
         document.getElementById('sub-display').innerText = "SYSTEM ONLINE";
-        document.getElementById('pwrBtn').style.background = "#2ea44f";
     }
 
     function hit(type, isPlayback = false, time = Tone.now()) {
@@ -98,7 +149,7 @@
         }
 
         if (!isPlayback) {
-            document.getElementById('display').innerText = type.toUpperCase();
+            document.getElementById('display').innerText = Math.floor(Math.random()*900 + 100);
             if (navigator.vibrate) navigator.vibrate(10);
         }
     }
@@ -107,31 +158,21 @@
         if (isPlaying) {
             Tone.Transport.stop();
             document.getElementById('playBtn').classList.remove('btn-active');
-            document.getElementById('display').innerText = "STOPPED";
         } else {
             Tone.Transport.start();
             document.getElementById('playBtn').classList.add('btn-active');
-            document.getElementById('display').innerText = "PLAYING";
         }
         isPlaying = !isPlaying;
     }
 
     function toggleRec() {
         isRecording = !isRecording;
-        const rb = document.getElementById('recBtn');
-        if (isRecording) {
-            rb.classList.add('rec-active');
-            document.getElementById('display').innerText = "RECORD";
-        } else {
-            rb.classList.remove('rec-active');
-            document.getElementById('display').innerText = "120 BPM";
-        }
+        document.getElementById('recBtn').classList.toggle('rec-active');
     }
 
     function clearSequence() {
         sequence.clear();
-        document.getElementById('display').innerText = "ERASED";
-        setTimeout(() => { document.getElementById('display').innerText = "120 BPM"; }, 1000);
+        document.getElementById('display').innerText = "CLR";
     }
 </script>
 </body>
