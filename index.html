@@ -1,53 +1,64 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>KO-II DEBUG</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
-        body { background: #1a1a1a; color: #ff5f00; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: monospace; }
-        #screen { border: 4px solid #333; padding: 20px; margin-bottom: 20px; font-size: 20px; background: #000; width: 200px; text-align: center; }
-        .pad-grid { display: grid; grid-template-columns: repeat(2, 100px); gap: 20px; }
-        .pad { width: 100px; height: 100px; background: #444; border: none; border-radius: 10px; color: white; font-weight: bold; cursor: pointer; box-shadow: 0 5px 0 #222; }
-        .pad:active { transform: translateY(4px); box-shadow: 0 1px 0 #222; background: #ff5f00; }
+        body { background: #1a1a1a; color: #ff5f00; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: sans-serif; }
+        .lcd { border: 4px solid #333; padding: 20px; background: #000; margin-bottom: 20px; min-width: 200px; text-align: center; box-shadow: 0 0 15px #ff5f0033; }
+        .btn { width: 200px; height: 60px; background: #ff5f00; color: white; border: none; border-radius: 10px; font-weight: bold; font-size: 18px; margin: 10px; cursor: pointer; }
+        .btn-off { background: #444; }
     </style>
 </head>
 <body>
 
-    <div id="screen">TAP A PAD</div>
-    <div class="pad-grid">
-        <button class="pad" onclick="beep(261)">1</button>
-        <button class="pad" onclick="beep(329)">2</button>
-        <button class="pad" onclick="beep(392)">3</button>
-        <button class="pad" onclick="beep(523)">4</button>
+    <div class="lcd">
+        <div id="status">SYSTEM OFF</div>
+        <div id="state" style="font-size: 12px; margin-top: 5px; color: #666;">TAP POWER</div>
     </div>
 
-    <script>
-        // Create the audio brain
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    <button class="btn" onclick="initAudio()">1. POWER ON</button>
+    <button class="btn btn-off" onclick="testSound()">2. TEST SOUND</button>
 
-        function beep(frequency) {
-            // 1. WAKE UP THE BRAIN (Crucial for Mobile)
+    <script>
+        let audioCtx;
+
+        function initAudio() {
+            // Create or Resume the context
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            
             if (audioCtx.state === 'suspended') {
                 audioCtx.resume();
             }
 
-            // 2. CREATE THE SOUND
-            const oscillator = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
+            document.getElementById('status').innerText = "SYSTEM READY";
+            document.getElementById('state').innerText = "STATE: " + audioCtx.state;
+            document.body.style.background = "#222";
+        }
 
-            oscillator.type = 'square'; // That "Retro" sound
-            oscillator.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+        function testSound() {
+            if (!audioCtx || audioCtx.state !== 'running') {
+                alert("Tap POWER ON first!");
+                return;
+            }
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(440, audioCtx.currentTime);
             
-            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.5);
+            gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
 
-            oscillator.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-
-            oscillator.start();
-            oscillator.stop(audioCtx.currentTime + 0.5);
-
-            document.getElementById('screen').innerText = "FREQ: " + frequency;
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.5);
+            
+            document.getElementById('status').innerText = "BEEPING...";
         }
     </script>
 </body>
